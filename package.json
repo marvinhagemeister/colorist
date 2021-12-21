@@ -33,7 +33,9 @@
 			"require": "./dist/cjs/index.js"
 		},
 		"./package.json": "./package.json",
-		"./": "./*"
+		"./dist/module": "./dist/module/index.js",
+		"./dist/esm": "./dist/esm/index.mjs",
+		"./dist/cjs": "./dist/cjs/index.js"
 	},
 	"files": [
 		"dist/",
