@@ -59,27 +59,29 @@ export let options = {
 	supportLevel,
 };
 
+type Kolorist = (str: string | number) => string;
+
 function kolorist(
 	start: number | string,
 	end: number | string,
 	level: SupportLevel = SupportLevel.ansi
-) {
+): Kolorist {
 	const open = `\x1b[${start}m`;
 	const close = `\x1b[${end}m`;
 	const regex = new RegExp(`\\x1b\\[${end}m`, 'g');
 
-	return (str: string | number) => {
+	return (str) => {
 		return options.enabled && options.supportLevel >= level
 			? open + ('' + str).replace(regex, open) + close
 			: '' + str;
 	};
 }
 
-export function stripColors(str: string | number) {
-	return ('' + str)
-		.replace(/\x1b\[[0-9;]+m/g, '')
-		.replace(/\x1b\]8;;.*?\x07(.*?)\x1b\]8;;\x07/g, (_, group) => group);
-}
+export const stripColors: Kolorist = (str) => (
+	('' + str)
+	.replace(/\x1b\[[0-9;]+m/g, '')
+	.replace(/\x1b\]8;;.*?\x07(.*?)\x1b\]8;;\x07/g, (_, group) => group)
+);
 
 // modifiers
 export const reset = kolorist(0, 0);
