@@ -41,7 +41,18 @@ describe('colors', () => {
 
 	it('should print demo', () => {
 		const strs = Object.keys(k)
-			.filter(key => !['options', 'ansi256', 'ansi256Bg', 'link', 'SupportLevel'].includes(key))
+			.filter(
+				key =>
+					![
+						'options',
+						'ansi256',
+						'ansi256Bg',
+						'link',
+						'SupportLevel',
+						'trueColor',
+						'trueColorBg',
+					].includes(key)
+			)
 			.map(x => (k as any)[x]('foobar'));
 
 		console.log(columnize(strs, 16));
@@ -72,6 +83,45 @@ describe('colors', () => {
 		it('should be ignored if no terminal support', () => {
 			k.options.supportLevel = k.SupportLevel.ansi;
 			t.equal(JSON.stringify(k.ansi256(194)('foo')), JSON.stringify('foo'));
+		});
+	});
+
+	describe('TrueColor 24bit', () => {
+		beforeEach(() => {
+			k.options.supportLevel = k.SupportLevel.trueColor;
+		});
+
+		it('should print foreground', () => {
+			const str = k.trueColor(134, 239, 172)('foo');
+			console.log(str);
+		});
+
+		it('should print background', () => {
+			const str = k.trueColorBg(134, 239, 172)('foo');
+			console.log(str);
+		});
+
+		it('should mix with modifiers', () => {
+			console.log(k.dim(k.trueColor(134, 239, 172)('foo')));
+			console.log(k.dim(k.trueColorBg(134, 239, 172)(k.black('foo'))));
+		});
+
+		it('should be stripped', () => {
+			t.equal(k.stripColors(k.trueColor(134, 239, 172)('foo')), 'foo');
+		});
+
+		it('should be ignored if no terminal support', () => {
+			k.options.supportLevel = k.SupportLevel.ansi;
+			t.equal(
+				JSON.stringify(k.trueColor(134, 239, 172)('foo')),
+				JSON.stringify('foo')
+			);
+		});
+
+		it('should convert color space to ansi256 if possible', () => {
+			k.options.supportLevel = k.SupportLevel.ansi256;
+			t.equal(k.trueColor(134, 239, 172)('foo'), k.ansi256(157)('foo'));
+			t.equal(k.trueColorBg(134, 239, 172)('foo'), k.ansi256Bg(157)('foo'));
 		});
 	});
 

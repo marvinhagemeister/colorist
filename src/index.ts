@@ -14,6 +14,7 @@ export const enum SupportLevel {
 	none,
 	ansi,
 	ansi256,
+	trueColor,
 }
 
 /**
@@ -22,10 +23,15 @@ export const enum SupportLevel {
 let supportLevel: SupportLevel = SupportLevel.none;
 
 if (globalVar.process && globalVar.process.env && globalVar.process.stdout) {
-	const { FORCE_COLOR, NODE_DISABLE_COLORS, NO_COLOR, TERM } = globalVar.process.env;
+	const { FORCE_COLOR, NODE_DISABLE_COLORS, NO_COLOR, TERM, COLORTERM } =
+		globalVar.process.env;
 	if (NODE_DISABLE_COLORS || NO_COLOR || FORCE_COLOR === '0') {
 		enabled = false;
-	} else if (FORCE_COLOR === '1' || FORCE_COLOR === '2' || FORCE_COLOR === '3') {
+	} else if (
+		FORCE_COLOR === '1' ||
+		FORCE_COLOR === '2' ||
+		FORCE_COLOR === '3'
+	) {
 		enabled = true;
 	} else if (TERM === 'dumb') {
 		enabled = false;
@@ -47,10 +53,19 @@ if (globalVar.process && globalVar.process.env && globalVar.process.stdout) {
 	}
 
 	if (enabled) {
-		supportLevel =
-			TERM && TERM.endsWith('-256color')
-				? SupportLevel.ansi256
-				: SupportLevel.ansi;
+		// Windows supports 24bit True Colors since Windows 10 revision #14931,
+		// see https://devblogs.microsoft.com/commandline/24-bit-color-in-the-windows-console/
+		if (process.platform === 'win32') {
+			supportLevel = SupportLevel.trueColor;
+		} else {
+			if (COLORTERM && (COLORTERM === 'truecolor' || COLORTERM === '24bit')) {
+				supportLevel = SupportLevel.trueColor;
+			} else if (TERM && (TERM.endsWith('-256color') || TERM.endsWith('256'))) {
+				supportLevel = SupportLevel.ansi256;
+			} else {
+				supportLevel = SupportLevel.ansi;
+			}
+		}
 	}
 }
 
@@ -73,6 +88,33 @@ function kolorist(
 			? open + ('' + str).replace(regex, open) + close
 			: '' + str;
 	};
+}
+
+// Lower colors into 256 color space
+// Taken from https://github.com/Qix-/color-convert/blob/3f0e0d4e92e235796ccb17f6e85c72094a651f49/conversions.js
+// which is MIT licensed and copyright by Heather Arthur and Josh Junon
+function rgbToAnsi256(r: number, g: number, b: number): number {
+	// We use the extended greyscale palette here, with the exception of
+	// black and white. normal palette only has 4 greyscale shades.
+	if (r >> 4 === g >> 4 && g >> 4 === b >> 4) {
+		if (r < 8) {
+			return 16;
+		}
+
+		if (r > 248) {
+			return 231;
+		}
+
+		return Math.round(((r - 8) / 247) * 24) + 232;
+	}
+
+	const ansi =
+		16 +
+		36 * Math.round((r / 255) * 5) +
+		6 * Math.round((g / 255) * 5) +
+		Math.round((b / 255) * 5);
+
+	return ansi;
 }
 
 export function stripColors(str: string | number) {
@@ -134,6 +176,18 @@ export const ansi256 = (n: number) =>
 	kolorist('38;5;' + n, 0, SupportLevel.ansi256);
 export const ansi256Bg = (n: number) =>
 	kolorist('48;5;' + n, 0, SupportLevel.ansi256);
+
+// TrueColor 24bit support
+export const trueColor = (r: number, g: number, b: number) => {
+	return options.supportLevel === SupportLevel.ansi256
+		? ansi256(rgbToAnsi256(r, g, b))
+		: kolorist(`38;2;${r};${g};${b}`, 0, SupportLevel.trueColor);
+};
+export const trueColorBg = (r: number, g: number, b: number) => {
+	return options.supportLevel === SupportLevel.ansi256
+		? ansi256Bg(rgbToAnsi256(r, g, b))
+		: kolorist(`48;2;${r};${g};${b}`, 0, SupportLevel.trueColor);
+};
 
 // Links
 const OSC = '\u001B]';
