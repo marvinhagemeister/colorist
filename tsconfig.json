@@ -2,11 +2,7 @@
 	"compilerOptions": {
 		"strict": true,
 		"target": "ES2019",
-		"module": "CommonJS",
-		"moduleResolution": "node",
-		"outDir": "dist/cjs/",
-		"sourceMap": true,
-		"allowJs": true
+		"skipLibCheck": true,
 	},
 	"files": ["./src/index.ts"]
 }
